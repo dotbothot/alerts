@@ -28,7 +28,9 @@ class BinancePumpAndDumpAlerter:
         check_new_listing_enabled,
         top_report_nearest_hour,
         telegram,
-        report_generator,
+        email=None,
+        health_checker=None,
+        report_generator=None,
     ):
         self.api_url = api_url
         self.watchlist = watchlist
@@ -45,6 +47,8 @@ class BinancePumpAndDumpAlerter:
         self.dump_enabled = dump_enabled
         self.check_new_listing_enabled = check_new_listing_enabled
         self.telegram = telegram
+        self.email = email
+        self.health_checker = health_checker
         self.report_generator = report_generator
 
         self.logger = logging.getLogger("pump-and-dump-alerter")
@@ -95,19 +99,23 @@ class BinancePumpAndDumpAlerter:
         return asset
 
     def retrieve_exchange_assets(self, api_url):
-        try:
-            self.logger.debug(
-                "Retrieving price information from the ticker. ApiUrl: %s.", api_url
-            )
-            return requests.get(api_url).json()
-        except Exception as e:
-            self.logger.error(
-                "Issue occurred while getting prices. Error: %s.",
-                e,
-                exc_info=True,
-            )
+        while True:
+            try:
+                self.logger.debug(
+                    "Retrieving price information from the ticker. ApiUrl: %s.", api_url
+                )
+                response = requests.get(api_url, timeout=10).json()
+                if isinstance(response, list):
+                    return response
+                else:
+                    self.logger.error("Unexpected response from API (expected list): %s", response)
+            except Exception as e:
+                self.logger.error(
+                    "Issue occurred while getting prices. Error: %s.",
+                    e,
+                    exc_info=True,
+                )
             sleep(5)  # Sleep 5s and try again
-            return self.retrieve_exchange_assets(api_url)
 
     def is_symbol_valid(self, symbol, watchlist, blacklist, pairs_of_interest):
         # Filter symbols in watchlist if set - This disables the pairsOfInterest feature
@@ -175,7 +183,14 @@ class BinancePumpAndDumpAlerter:
     ):
         for asset in monitored_assets:
             exchange_asset = self.extract_ticker_data(asset["symbol"], exchange_assets)
-            asset["price"].append(float(exchange_asset["price"]))
+            
+            if exchange_asset is None:
+                if len(asset["price"]) > 0:
+                    asset["price"].append(asset["price"][-1])
+                else:
+                    asset["price"].append(0.0)
+            else:
+                asset["price"].append(float(exchange_asset["price"]))
 
             self.calculate_asset_change(
                 asset,
@@ -357,6 +372,32 @@ class BinancePumpAndDumpAlerter:
                 is_alert_chat=True,
             )
 
+        if self.email and self.email.is_enabled():
+            await self.email.send_generic_message(message.format(len(filtered_assets)))
+
+        while True:
+            try:
+                await self._run_cycle(
+                    initial_assets,
+                    filtered_assets,
+                )
+            except Exception as e:
+                self.logger.error(
+                    "Unhandled exception in main loop. Error: %s",
+                    e,
+                    exc_info=True,
+                )
+                if self.health_checker:
+                    await self.health_checker.record_error()
+                if self.email and self.email.is_enabled():
+                    await self.email.send_error_alert(str(e))
+                await self.telegram.send_generic_message(
+                    f"⚠️ Bot error occurred. Restarting... Error: {e}",
+                    is_alert_chat=True,
+                )
+                await asyncio.sleep(5)
+
+    async def _run_cycle(self, initial_assets, filtered_assets):
         while True:
             start_loop_time = time.time()
             loop_time = int(start_loop_time)
@@ -419,3 +460,6 @@ class BinancePumpAndDumpAlerter:
                 sleep_time = start_loop_time + self.extract_interval - end_loop_time
                 self.logger.debug("Now sleeping %f seconds.", sleep_time)
                 await asyncio.sleep(sleep_time)
+
+            if self.health_checker:
+                await self.health_checker.check_and_send_ping(len(filtered_assets))

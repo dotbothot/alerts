@@ -5,7 +5,7 @@ import asyncio
 
 from alerter import BinancePumpAndDumpAlerter
 from reporter import ReportGenerator
-from sender import TelegramSender
+from sender import TelegramSender, EmailSender, HealthChecker
 from utils import ConversionUtils
 
 # Read config
@@ -55,8 +55,31 @@ async def main():
         news_emoji=config["newsEmoji"],
     )
 
+    email = None
+    if config.get("emailEnabled", False):
+        email = EmailSender(
+            smtp_host="smtp.gmail.com",
+            smtp_port=587,
+            email_from=config.get("emailFrom"),
+            email_to=config.get("emailTo"),
+            username=config.get("emailUsername"),
+            password=config.get("emailPassword"),
+            use_tls=True,
+        )
+        logger.info("Email alerts enabled")
+
+    health_checker = None
+    if config.get("healthPingEnabled", True):
+        health_checker = HealthChecker(
+            telegram=telegram,
+            email=email,
+            ping_interval_seconds=config.get("healthPingInterval", 3600),
+        )
+        logger.info(f"Health ping enabled every {config.get('healthPingInterval', 3600)}s")
+
     reporter = ReportGenerator(
         telegram=telegram,
+        email=email,
         alert_skip_threshold=config["alertSkipThreshold"],
         pump_emoji=config["pumpEmoji"],
         dump_emoji=config["dumpEmoji"],
@@ -83,6 +106,8 @@ async def main():
         check_new_listing_enabled=config["checkNewListingEnabled"],
         top_report_nearest_hour=config["topReportNearestHour"],
         telegram=telegram,
+        email=email,
+        health_checker=health_checker,
         report_generator=reporter,
     )
 

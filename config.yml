@@ -4,9 +4,8 @@
 # Using Futures API with url set to: https://fapi.binance.com/fapi/v1/ticker/price
 apiUrl: https://api.binance.com/api/v3/ticker/price
 
-# Intervals which are monitored. Add or remove intervals as you like.
+# Intervals which are monitored. For scalping volatile pumps, use 5m+
 chartIntervals:
-  - 1m
   - 5m
   - 15m
   - 30m
@@ -14,29 +13,28 @@ chartIntervals:
   - 3h
   - 6h
 
-# Values in % at which an alert is triggered. Ensure interval exists in chartIntervals as well.
+# Values in % at which an alert is triggered. Higher thresholds = fewer alerts.
 outlierIntervals:
-  "1m": 0.01
-  "5m": 0.02
-  "15m": 0.03
-  "30m": 0.04
-  "1h": 0.05
-  "3h": 0.1
-  "6h": 0.2
+  "5m": 1.0
+  "15m": 3.0
+  "30m": 5.0
+  "1h": 8.0
+  "3h": 15.0
+  "6h": 25.0
 
 # Used for telegram bot updates
 
 # Insert telegramToken obtained from @BotFather here
-telegramToken: 6134324860:AAG3yrWzx9NhOuPx_7D4mdRZ5EzyokM8KXs
+telegramToken: 8701052003:AAHWzGsqkGSrA9GWRjx1Ea1AoJ7wagwjxq4
 # Insert Chat ID obtained from @get_id_bot here
-telegramChatId: 1146471541
+telegramChatId: 8471777618
 # Insert Chat ID for top pump dump alert, if left on `0` it'll send the message to telegram chat id
 telegramAlertChatId: 0
 
 # Useful Params
 
-# Interval between each price extract from Binance REST API
-extractInterval: 1s
+# Extracts data every 2 seconds for better scalability
+extractInterval: 2s
 
 # Watchlist only mode, if enabled, ONLY pairs in watchlist will be monitored
 # E.g. 'ADAUSDT', 'ETHUSDT'
@@ -69,9 +67,8 @@ topDumpEnabled: True
 additionalStatsEnabled: True
 # Top X amount of coins shown in the interval report, adjust to show more or less within the timeframe
 noOfReportedCoins: 5
-# Intervals for top pump and dump to be sent, ensure its in chartIntervals + outlierIntervals as well
+# Intervals for top pump and dump to be sent - matching chart intervals
 topReportIntervals:
-  - 1m
   - 5m
   - 15m
   - 30m
@@ -90,8 +87,8 @@ newsEmoji: ! "\U0001F4F0" # 📰 or '\U0001F680' 🚀
 
 # If False we do not print unnecessary messages
 debug: True
-# Skip alert at higher timeframes when change in % did not change value by threshold in percentage points
-alertSkipThreshold: 0.75
+# Skip alert if change delta between intervals is less than this threshold (%)
+alertSkipThreshold: 2.0
 # Interval for clearing array to prevent memory can handle up to 12h+ depending on system
 resetInterval: 6h
 # In the case of get price fail, this is the time delay before re-attempt
@@ -100,3 +97,14 @@ priceRetryInterval: 5s
 checkNewListingEnabled: True
 # Disables rounding to nearest hour for first TPD if false
 topReportNearestHour: True
+
+# Health check - ping every hour to confirm bot is alive
+healthPingEnabled: True
+healthPingInterval: 3600
+
+# Email alerts via Gmail SMTP
+emailEnabled: True
+emailFrom: your-email@gmail.com
+emailTo: zaki.faiz4@gmail.com
+emailUsername: your-email@gmail.com
+emailPassword: your-app-password

@@ -8,15 +8,19 @@ class ReportGenerator:
         self,
         telegram,
         alert_skip_threshold,
+        email=None,
         pump_emoji="\U0001F7E2",  # 🟢
         dump_emoji="\U0001F534",  # 🔴
     ):
         self.telegram = telegram
+        self.email = email
         self.alert_skip_threshold = alert_skip_threshold
         self.pump_emoji = pump_emoji
         self.dump_emoji = dump_emoji
 
         self.logger = logging.getLogger("report-generator")
+
+        self.alert_cooldown = {}
 
     async def send_pump_message(self, symbol, interval, change, price):
         await self.telegram.send_message(
@@ -65,10 +69,22 @@ Open in [Binance Spot](https://www.binance.com/en/trade/{1})\
         outlier_intervals,
         current_time,
         dump_enabled=True,
+        cooldown_seconds=60,
     ):
         change_biggest_delta = 0
         no_of_alerts = 0
         message = ""
+
+        symbol = asset["symbol"]
+
+        last_alert_time = self.alert_cooldown.get(symbol, 0)
+        if current_time - last_alert_time < cooldown_seconds:
+            self.logger.debug(
+                "Cooldown active for %s. Last alert %ds ago. Skipping.",
+                symbol,
+                current_time - last_alert_time,
+            )
+            return
 
         for interval in chart_intervals:
 
@@ -136,6 +152,18 @@ Open in [Binance Spot](https://www.binance.com/en/trade/{0})\
         )
 
         await self.telegram.send_news_message(news_message)
+
+        if self.email and self.email.is_enabled():
+            await self.email.send_alert(
+                self.pump_emoji if change > 0 else self.dump_emoji,
+                asset["symbol"],
+                interval,
+                change * 100,
+                asset["price"][-1],
+                "PUMP" if change > 0 else "DUMP",
+            )
+
+        self.alert_cooldown[symbol] = current_time
 
     async def send_top_pump_dump_statistics_report(
         self,

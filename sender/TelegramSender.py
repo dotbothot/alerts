@@ -38,22 +38,27 @@ class TelegramSender:
         chat_id = self.chat_id if not is_alert_chat else self.alert_chat_id
 
         self.logger.info(message)
-        try:
-            await self.bot.send_message(
-                chat_id=chat_id,
-                text=message,
-                parse_mode=ParseMode.MARKDOWN,
-                disable_web_page_preview=True,
-            )
-        except RetryAfter as e:
-            self.logger.error(
-                "Flood limit is exceeded. Sleep {} seconds.", e.retry_after
-            )
-            await asyncio.sleep(e.retry_after)
-            # Resend message
-            await self.send_message(message, is_alert_chat)
-        except Exception as e:
-            self.logger.error(str(e))
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                await self.bot.send_message(
+                    chat_id=chat_id,
+                    text=message,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True,
+                )
+                return
+            except RetryAfter as e:
+                self.logger.error(
+                    "Flood limit is exceeded. Sleep {} seconds.", e.retry_after
+                )
+                await asyncio.sleep(e.retry_after)
+            except Exception as e:
+                self.logger.error("Failed to send message: %s", e)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 * (attempt + 1))
+                else:
+                    self.logger.error("Message failed after %d retries: %s", max_retries, message)
 
     async def send_generic_message(self, message, args=None, is_alert_chat=False):
         if args is not None:

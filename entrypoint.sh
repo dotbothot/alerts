@@ -75,6 +75,29 @@ process_config() {
     if [[ -n $TOP_REPORT_NEAREST_HOUR ]]; then
         sed -i "s/topReportNearestHour.*/topReportNearestHour: ${TOP_REPORT_NEAREST_HOUR}/" config.yml
     fi
+
+    if [[ -n $HEALTH_PING_ENABLED ]]; then
+        sed -i "s/healthPingEnabled.*/healthPingEnabled: ${HEALTH_PING_ENABLED}/" config.yml
+    fi
+    if [[ -n $HEALTH_PING_INTERVAL ]]; then
+        sed -i "s/healthPingInterval.*/healthPingInterval: ${HEALTH_PING_INTERVAL}/" config.yml
+    fi
+
+    if [[ -n $EMAIL_ENABLED ]]; then
+        sed -i "s/emailEnabled.*/emailEnabled: ${EMAIL_ENABLED}/" config.yml
+    fi
+    if [[ -n $EMAIL_FROM ]]; then
+        sed -i "s/emailFrom.*/emailFrom: ${EMAIL_FROM}/" config.yml
+    fi
+    if [[ -n $EMAIL_TO ]]; then
+        sed -i "s/emailTo.*/emailTo: ${EMAIL_TO}/" config.yml
+    fi
+    if [[ -n $EMAIL_USERNAME ]]; then
+        sed -i "s/emailUsername.*/emailUsername: ${EMAIL_USERNAME}/" config.yml
+    fi
+    if [[ -n $EMAIL_PASSWORD ]]; then
+        sed -i "s/emailPassword.*/emailPassword: ${EMAIL_PASSWORD}/" config.yml
+    fi
 }
 
 # Adding parameters set from the environment variables to the config yaml file.
