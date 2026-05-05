@@ -219,7 +219,7 @@ class BinancePumpAndDumpAlerter:
             data_points = chart_intervals[interval]["value"] // extract_interval
 
             # If data is not available yet after restart for interval, stop here.
-            if data_points >= asset_length:
+            if data_points > asset_length:
                 self.logger.debug(
                     "Not enough datapoints (%s/%s) for interval: %s",
                     asset_length,
@@ -268,6 +268,8 @@ class BinancePumpAndDumpAlerter:
             for asset in assets:
                 if len(asset["price"]) > data_points:
                     asset["price"] = asset["price"][-data_points:]
+
+            self.logger.info("Price data reset complete. Monitoring %d pairs.", len(assets))
 
             initial_time = current_time
 
