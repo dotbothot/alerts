@@ -259,19 +259,15 @@ class BinancePumpAndDumpAlerter:
     ):
         if current_time - initial_time > reset_interval:
 
-            message = "Emptying price data to prevent memory errors."
-            self.logger.debug(message)
-            await self.telegram.send_generic_message(message, is_alert_chat=True)
+            self.logger.info("Resetting price data to prevent memory overflow.")
 
-            # Do not delete everything, only elements older than the last monitored interval
-            lastInterval = "1s"
-            for interval in chart_intervals:
-                lastInterval = interval
+            lastInterval = list(chart_intervals.keys())[-1]
 
             data_points = chart_intervals[lastInterval]["value"] // extract_interval
 
             for asset in assets:
-                asset["price"] = asset["price"][-1 - data_points :]
+                if len(asset["price"]) > data_points:
+                    asset["price"] = asset["price"][-data_points:]
 
             initial_time = current_time
 

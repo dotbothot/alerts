@@ -4,8 +4,9 @@
 # Using Futures API with url set to: https://fapi.binance.com/fapi/v1/ticker/price
 apiUrl: https://api.binance.com/api/v3/ticker/price
 
-# Intervals which are monitored. For scalping volatile pumps, use 5m+
+# Intervals which are monitored. For scalping: 1m for fast alerts + 5m+ for confirmation
 chartIntervals:
+  - 1m
   - 5m
   - 15m
   - 30m
@@ -13,9 +14,11 @@ chartIntervals:
   - 3h
   - 6h
 
-# Values in % at which an alert is triggered. Higher thresholds = fewer alerts.
+# Values in % at which an alert is triggered. Higher = less spam.
+# 1m: 5% = big moves only (prevents spam). 5m: 2%, 15m: 3%, 30m: 5%, 1h+: 8%+
 outlierIntervals:
-  "5m": 1.0
+  "1m": 5.0
+  "5m": 2.0
   "15m": 3.0
   "30m": 5.0
   "1h": 8.0
@@ -69,6 +72,7 @@ additionalStatsEnabled: True
 noOfReportedCoins: 5
 # Intervals for top pump and dump to be sent - matching chart intervals
 topReportIntervals:
+  - 1m
   - 5m
   - 15m
   - 30m
@@ -103,7 +107,7 @@ healthPingEnabled: True
 healthPingInterval: 3600
 
 # Email alerts via Gmail SMTP
-emailEnabled: True
+emailEnabled: False
 emailFrom: your-email@gmail.com
 emailTo: zaki.faiz4@gmail.com
 emailUsername: your-email@gmail.com
